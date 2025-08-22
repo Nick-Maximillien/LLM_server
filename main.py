@@ -5,34 +5,31 @@ import torch
 import os
 
 app = FastAPI()
-device = torch.device("cpu")
+device = torch.device("cpu")  # CPU-friendly
 
 # Model cache folder inside container
 model_dir = "./model"
 
 # Hugging Face GPTQ 4-bit CPU-friendly model (can override via env variable)
-model_name = os.getenv("MODEL_NAME", "TheBloke/llama-2-7b-GPTQ-4bit-128g")
-hf_token = os.getenv("HF_TOKEN")  # <-- Hugging Face token from environment
+model_name = os.getenv("MODEL_NAME", "kaitchup/Llama-2-7b-gptq-4bit")
 
 # Download and cache model if not already cached
 if not os.path.exists(model_dir):
     print(f"Downloading GPTQ 4-bit model: {model_name} ...")
     tokenizer = AutoTokenizer.from_pretrained(
         model_name,
-        cache_dir=model_dir,
-        use_auth_token=hf_token
+        cache_dir=model_dir
     )
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
         device_map={"": device},
-        cache_dir=model_dir,
-        use_auth_token=hf_token
+        cache_dir=model_dir
     )
     print("✅ Model downloaded and cached in ./model")
 else:
     print("Loading model from cache...")
-    tokenizer = AutoTokenizer.from_pretrained(model_dir, use_auth_token=hf_token)
-    model = AutoModelForCausalLM.from_pretrained(model_dir, device_map={"": device}, use_auth_token=hf_token)
+    tokenizer = AutoTokenizer.from_pretrained(model_dir)
+    model = AutoModelForCausalLM.from_pretrained(model_dir, device_map={"": device})
 
 # Request schema
 class RequestData(BaseModel):
