@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: llama-api
+    env: docker
+    dockerfilePath: Dockerfile
+    repo: https://github.com/Nick-Maximillien/LLM_server
+    branch: main
+    plan: free
+    region: oregon
+    port: 10000
+    autoDeploy: true
+    healthCheckPath: /
+    envVars:
+      # Stream Python logs in real time
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      # Model name to load in main.py (flexible for future swaps)
+      - key: MODEL_NAME
+        value: "TheBloke/llama-2-7b-GPTQ-4bit-128g"
+      # Optional: add more env vars here for max tokens, API keys, etc.
