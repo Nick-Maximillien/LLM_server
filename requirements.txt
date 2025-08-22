@@ -1,6 +1,9 @@
 fastapi==0.107.0
 uvicorn[standard]==0.23.1
-torch==2.2.0+cpu --extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.2.0
 transformers==4.44.2
-auto-gptq==0.7.1
+bitsandbytes==0.39.0
 accelerate==0.23.0
+optimum==1.17.1
+numpy<2
+pydantic==1.10.12

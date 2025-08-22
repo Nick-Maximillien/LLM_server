@@ -16,5 +16,5 @@ services:
         value: "1"
       # Model name to load in main.py (flexible for future swaps)
       - key: MODEL_NAME
-        value: "kaitchup/Llama-2-7b-gptq-4bit"
+        value: "sshleifer/tiny-gpt2"
       # Optional: add more env vars here for max tokens, API keys, etc.

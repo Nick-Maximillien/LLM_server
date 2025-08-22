@@ -1,51 +1,51 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch
 import os
 
 app = FastAPI()
-device = torch.device("cpu")  # CPU-friendly
+device = torch.device("cpu")
 
-# Model cache folder inside container
+# Model cache directory
 model_dir = "./model"
 
-# Hugging Face GPTQ 4-bit CPU-friendly model (can override via env variable)
-model_name = os.getenv("MODEL_NAME", "kaitchup/Llama-2-7b-gptq-4bit")
+# Use a CPU-friendly model (default = tiny GPT-2)
+model_name = os.getenv("MODEL_NAME", "sshleifer/tiny-gpt2")
 
-# Download and cache model if not already cached
-if not os.path.exists(model_dir):
-    print(f"Downloading GPTQ 4-bit model: {model_name} ...")
-    tokenizer = AutoTokenizer.from_pretrained(
-        model_name,
-        cache_dir=model_dir
-    )
-    model = AutoModelForCausalLM.from_pretrained(
-        model_name,
-        device_map={"": device},
-        cache_dir=model_dir
-    )
-    print("✅ Model downloaded and cached in ./model")
-else:
-    print("Loading model from cache...")
-    tokenizer = AutoTokenizer.from_pretrained(model_dir)
-    model = AutoModelForCausalLM.from_pretrained(model_dir, device_map={"": device})
+# Global vars for tokenizer & model
+tokenizer = None
+model = None
 
-# Request schema
 class RequestData(BaseModel):
     prompt: str
     max_tokens: int = 100
 
-# Endpoint for text generation
+@app.on_event("startup")
+def load_model():
+    global tokenizer, model
+    os.makedirs(model_dir, exist_ok=True)
+    print(f"🔄 Loading model: {model_name}")
+    tokenizer = AutoTokenizer.from_pretrained(model_name, cache_dir=model_dir)
+    model = AutoModelForCausalLM.from_pretrained(model_name, cache_dir=model_dir)
+    model.to(device)
+    print("✅ Model ready")
+
 @app.post("/generate")
 def generate_text(data: RequestData):
-    inputs = tokenizer(data.prompt, return_tensors="pt").to(device)
-    with torch.no_grad():  # prevents gradient computation, saves CPU/memory
-        outputs = model.generate(**inputs, max_new_tokens=data.max_tokens)
-    text = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    return {"response": text}
+    try:
+        inputs = tokenizer(data.prompt, return_tensors="pt").to(device)
+        with torch.no_grad():
+            outputs = model.generate(
+                **inputs,
+                max_new_tokens=data.max_tokens,
+                pad_token_id=tokenizer.eos_token_id
+            )
+        text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+        return {"response": text}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-# Health check endpoint
 @app.get("/")
 def home():
-    return {"status": "CPU-friendly GPTQ 4-bit LLaMA API running"}
+    return {"status": f"🚀 CPU-friendly model API running with {model_name}"}
